@@ -5,6 +5,7 @@ use reqwest::{blocking::Client, header};
 use std::collections::HashMap;
 
 const API_ROOT: &str = "https://api.guildwars2.com/v2/";
+const ITEM_INFO_ENDPOINT_MAX: usize = 200;
 
 pub struct Api {
     client: Client,
@@ -69,11 +70,15 @@ impl Api {
         loop {
             debug!(
                 "Getting batch {} of {} of items from the API",
-                processed / 200 + 1,
-                ids.len() / 200
+                processed / ITEM_INFO_ENDPOINT_MAX + 1,
+                ids.len() / ITEM_INFO_ENDPOINT_MAX
             );
-            let ids_batch: Vec<_> = ids.iter().skip(processed).take(200).collect();
-            processed += 200;
+            let ids_batch: Vec<_> = ids
+                .iter()
+                .skip(processed)
+                .take(ITEM_INFO_ENDPOINT_MAX)
+                .collect();
+            processed += ITEM_INFO_ENDPOINT_MAX;
             let resp = self
                 .client
                 .get(&format!(

@@ -12,7 +12,6 @@ fn cache_file_path() -> PathBuf {
         &home::home_dir().expect("Could not determine home directory"),
         ".gw2_inventory_cache.json",
     )
-    .to_path_buf()
 }
 
 pub struct Cache {
