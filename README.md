@@ -4,9 +4,7 @@
 [![Crates.io](https://img.shields.io/crates/v/gw2_inventory.svg)](https://crates.io/crates/gw2_inventory)
 [![License](https://img.shields.io/crates/l/gw2_inventory)](https://github.com/Celeo/gw2_inventory/blob/master/Cargo.toml#L10)
 
-Navigate directly to crate links from your terminal.
-
-Inspired by [njt](https://github.com/kachkaev/njt).
+TBD
 
 ## Installing
 
