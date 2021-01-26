@@ -10,7 +10,7 @@ mod cache;
 use cache::Cache;
 mod screen;
 
-fn select_characters<'a>(characters: &'a [String]) -> Result<Vec<&'a str>> {
+fn select_characters(characters: &[String]) -> Result<Vec<&str>> {
     let theme = ColorfulTheme::default();
     info!("Select which character(s) to search");
     info!("Use the arrow keys to move, the spacebar to toggle, and enter to submit\n\n");
