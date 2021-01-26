@@ -46,8 +46,3 @@ pub struct ItemInfo {
     pub rarity: String,
     pub icon: Option<String>,
 }
-
-// TODO improvements
-pub fn for_display(slot: &InventorySlot, info: &ItemInfo) -> String {
-    format!("{} (x{})", info.name, slot.count)
-}

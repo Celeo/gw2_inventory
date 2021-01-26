@@ -1,7 +1,4 @@
-use crate::{
-    cache::Cache,
-    models::{for_display, Inventory},
-};
+use crate::{cache::Cache, filtering::filter, models::Inventory};
 use anyhow::Result;
 use log::error;
 use std::{collections::HashMap, io, sync::mpsc, thread, time::Duration};
@@ -52,8 +49,8 @@ impl App {
 
     fn search_status(&self) -> String {
         format!(
-            "Page {}/{}   Showing {} of {} total",
-            self.page,
+            "Page {}/{}, showing {} per page, {} total items",
+            self.page + 1,
             self.max_pages(),
             self.page_size,
             self.get_all_slots_count()
@@ -61,23 +58,16 @@ impl App {
     }
 
     fn max_pages(&self) -> usize {
-        self.get_all_slots_count() / self.page_size as usize + 1
+        ((self.get_all_slots_count() as f64) / (self.page_size as f64)).ceil() as usize
     }
 
     fn filtered_items(&self) -> Vec<String> {
-        // TODO filtering and pagination
-        // TODO combine all items of the same type per character into a single "stack"
-        let mut ret = Vec::new();
         let slots = self
             .inventories
             .values()
             .flat_map(|inv| inv.all_content())
             .collect::<Vec<_>>();
-        for slot in slots {
-            let info = self.cache.lookup(&slot.id);
-            ret.push(for_display(&slot, info));
-        }
-        ret
+        filter(&slots, &self.cache, self.page, self.page_size)
     }
 }
 
@@ -195,7 +185,7 @@ pub fn run(inventories: HashMap<String, Inventory>, cache: Cache) -> Result<()> 
                 EXIT_KEY => break,
                 Key::Esc => app.input.clear(),
                 Key::PageDown => {
-                    if app.page < app.max_pages() {
+                    if app.page < app.max_pages() - 1 {
                         app.page += 1;
                     }
                 }

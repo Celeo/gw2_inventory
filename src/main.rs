@@ -8,6 +8,7 @@ mod models;
 use api::Api;
 mod cache;
 use cache::Cache;
+mod filtering;
 mod screen;
 
 fn select_characters(characters: &[String]) -> Result<Vec<&str>> {
