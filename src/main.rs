@@ -13,7 +13,7 @@ mod screen;
 fn select_characters(characters: &[String]) -> Result<Vec<&str>> {
     let theme = ColorfulTheme::default();
     info!("Select which character(s) to search");
-    info!("Use the arrow keys to move, the spacebar to toggle, and enter to submit\n\n");
+    info!("Use the arrow keys to move, the spacebar to toggle, and enter to submit\n");
     let chosen = MultiSelect::with_theme(&theme)
         .with_prompt("Select values")
         .items(&characters)

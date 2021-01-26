@@ -4,7 +4,7 @@ use crate::{
 };
 use anyhow::Result;
 use log::error;
-use std::{cmp::max, collections::HashMap, io, sync::mpsc, thread, time::Duration};
+use std::{collections::HashMap, io, sync::mpsc, thread, time::Duration};
 use termion::{
     event::Key,
     input::{MouseTerminal, TermRead},
@@ -28,7 +28,8 @@ struct App {
     inventories: HashMap<String, Inventory>,
     cache: Cache,
     input: String,
-    page: u64,
+    page: usize,
+    page_size: u16,
 }
 
 impl App {
@@ -38,7 +39,29 @@ impl App {
             cache,
             input: String::new(),
             page: 0,
+            page_size: 0,
         }
+    }
+
+    fn get_all_slots_count(&self) -> usize {
+        self.inventories
+            .values()
+            .flat_map(|inv| inv.all_content())
+            .count()
+    }
+
+    fn search_status(&self) -> String {
+        format!(
+            "Page {}/{}   Showing {} of {} total",
+            self.page,
+            self.max_pages(),
+            self.page_size,
+            self.get_all_slots_count()
+        )
+    }
+
+    fn max_pages(&self) -> usize {
+        self.get_all_slots_count() / self.page_size as usize + 1
     }
 
     fn filtered_items(&self) -> Vec<String> {
@@ -101,6 +124,9 @@ impl Events {
 }
 
 pub fn run(inventories: HashMap<String, Inventory>, cache: Cache) -> Result<()> {
+    // ===========
+    //    Setup
+    // ===========
     let stdout = io::stdout().into_raw_mode()?;
     let stdout = MouseTerminal::from(stdout);
     let stdout = AlternateScreen::from(stdout);
@@ -126,16 +152,27 @@ pub fn run(inventories: HashMap<String, Inventory>, cache: Cache) -> Result<()> 
                     .as_ref(),
                 )
                 .split(f.size());
+            app.page_size = chunks[2].height - 2;
 
             let mut msg = Text::from(Span::raw("Type to filter, use Alt+Q to exit"));
             msg.patch_style(Style::default());
             let header = Paragraph::new(msg);
             f.render_widget(header, chunks[0]);
 
+            let search_chunks = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
+                .split(chunks[1]);
+
             let input = Paragraph::new(app.input.as_ref())
                 .style(Style::default().fg(Color::Yellow))
                 .block(Block::default().borders(Borders::ALL).title("Input"));
-            f.render_widget(input, chunks[1]);
+            f.render_widget(input, search_chunks[0]);
+
+            let status_msg = Paragraph::new(app.search_status())
+                .style(Style::default())
+                .block(Block::default().borders(Borders::ALL));
+            f.render_widget(status_msg, search_chunks[1]);
 
             let filtered_items = app.filtered_items();
             let list_items: Vec<_> = filtered_items
@@ -154,14 +191,19 @@ pub fn run(inventories: HashMap<String, Inventory>, cache: Cache) -> Result<()> 
         // ===========
 
         if let Event::Input(input) = events.next()? {
-            if EXIT_KEY == input {
-                break;
-            }
             match input {
                 EXIT_KEY => break,
                 Key::Esc => app.input.clear(),
-                Key::PageDown => app.page += 1,
-                Key::PageUp => app.page = max(0, app.page - 1),
+                Key::PageDown => {
+                    if app.page < app.max_pages() {
+                        app.page += 1;
+                    }
+                }
+                Key::PageUp => {
+                    if app.page > 0 {
+                        app.page -= 1;
+                    }
+                }
                 Key::Char(c) => app.input.push(c),
                 Key::Backspace => {
                     app.input.pop();
