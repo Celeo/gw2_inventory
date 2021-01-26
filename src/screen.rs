@@ -1,13 +1,10 @@
-use anyhow::Result;
-use std::{
-    io,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        mpsc, Arc,
-    },
-    thread,
-    time::Duration,
+use crate::{
+    cache::Cache,
+    models::{for_display, Inventory},
 };
+use anyhow::Result;
+use log::error;
+use std::{cmp::max, collections::HashMap, io, sync::mpsc, thread, time::Duration};
 use termion::{
     event::Key,
     input::{MouseTerminal, TermRead},
@@ -17,123 +14,159 @@ use termion::{
 use tui::{
     backend::TermionBackend,
     layout::{Constraint, Direction, Layout},
-    widgets::{Block, Borders},
+    style::{Color, Style},
+    text::{Span, Text},
+    widgets::{Block, Borders, List, ListItem, Paragraph},
     Terminal,
 };
+use unicode_width::UnicodeWidthStr;
 
-#[derive(Debug, Clone, Copy)]
-pub struct Config {
-    pub exit_key: Key,
-    pub tick_rate: Duration,
+const TICK_RATE: Duration = Duration::from_millis(250);
+const EXIT_KEY: Key = Key::Alt('q');
+
+struct App {
+    inventories: HashMap<String, Inventory>,
+    cache: Cache,
+    input: String,
+    page: u64,
 }
 
-impl Default for Config {
-    fn default() -> Config {
-        Config {
-            exit_key: Key::Char('q'),
-            tick_rate: Duration::from_millis(250),
+impl App {
+    fn new(inventories: HashMap<String, Inventory>, cache: Cache) -> Self {
+        Self {
+            inventories,
+            cache,
+            input: String::new(),
+            page: 0,
         }
+    }
+
+    fn filtered_items(&self) -> Vec<String> {
+        // TODO filtering and pagination
+        // TODO combine all items of the same type per character into a single "stack"
+        let mut ret = Vec::new();
+        let slots = self
+            .inventories
+            .values()
+            .flat_map(|inv| inv.all_content())
+            .collect::<Vec<_>>();
+        for slot in slots {
+            let info = self.cache.lookup(&slot.id);
+            ret.push(for_display(&slot, info));
+        }
+        ret
     }
 }
 
-pub enum Event<I> {
+enum Event<I> {
     Input(I),
     Tick,
 }
 
-pub struct Events {
+#[derive(Debug)]
+struct Events {
     rx: mpsc::Receiver<Event<Key>>,
-    input_handle: thread::JoinHandle<()>,
-    ignore_exit_key: Arc<AtomicBool>,
-    tick_handle: thread::JoinHandle<()>,
 }
 
 impl Events {
-    pub fn new() -> Events {
-        Events::with_config(Config::default())
-    }
-
-    pub fn with_config(config: Config) -> Events {
+    fn new() -> Self {
         let (tx, rx) = mpsc::channel();
-        let ignore_exit_key = Arc::new(AtomicBool::new(false));
-        let input_handle = {
-            let tx = tx.clone();
-            let ignore_exit_key = ignore_exit_key.clone();
-            thread::spawn(move || {
-                let stdin = io::stdin();
-                for evt in stdin.keys() {
-                    if let Ok(key) = evt {
-                        if let Err(err) = tx.send(Event::Input(key)) {
-                            eprintln!("{}", err);
-                            return;
-                        }
-                        if !ignore_exit_key.load(Ordering::Relaxed) && key == config.exit_key {
-                            return;
-                        }
+        let tx_ = tx.clone();
+        thread::spawn(move || {
+            let stdin = io::stdin();
+            for evt in stdin.keys() {
+                if let Ok(key) = evt {
+                    if let Err(err) = tx_.send(Event::Input(key)) {
+                        error!("{}", err);
+                        return;
+                    }
+                    if key == EXIT_KEY {
+                        return;
                     }
                 }
-            })
-        };
-        let tick_handle = {
-            thread::spawn(move || loop {
-                if tx.send(Event::Tick).is_err() {
-                    break;
-                }
-                thread::sleep(config.tick_rate);
-            })
-        };
-        Events {
-            rx,
-            ignore_exit_key,
-            input_handle,
-            tick_handle,
-        }
+            }
+        });
+        thread::spawn(move || loop {
+            if tx.send(Event::Tick).is_err() {
+                break;
+            }
+            thread::sleep(TICK_RATE);
+        });
+        Events { rx }
     }
 
-    pub fn next(&self) -> Result<Event<Key>, mpsc::RecvError> {
+    fn next(&self) -> Result<Event<Key>, mpsc::RecvError> {
         self.rx.recv()
-    }
-
-    pub fn disable_exit_key(&mut self) {
-        self.ignore_exit_key.store(true, Ordering::Relaxed);
-    }
-
-    pub fn enable_exit_key(&mut self) {
-        self.ignore_exit_key.store(false, Ordering::Relaxed);
     }
 }
 
-pub fn run() -> Result<()> {
+pub fn run(inventories: HashMap<String, Inventory>, cache: Cache) -> Result<()> {
     let stdout = io::stdout().into_raw_mode()?;
     let stdout = MouseTerminal::from(stdout);
     let stdout = AlternateScreen::from(stdout);
     let backend = TermionBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
     let events = Events::new();
+    let mut app = App::new(inventories, cache);
 
     loop {
+        // ============
+        //    Render
+        // ============
         terminal.draw(|f| {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
+                .margin(1)
                 .constraints(
                     [
-                        Constraint::Percentage(10),
-                        Constraint::Percentage(80),
-                        Constraint::Percentage(10),
+                        Constraint::Length(1),
+                        Constraint::Length(3),
+                        Constraint::Min(1),
                     ]
                     .as_ref(),
                 )
                 .split(f.size());
 
-            let block = Block::default().title("Block").borders(Borders::ALL);
-            f.render_widget(block, chunks[0]);
-            let block = Block::default().title("Block 2").borders(Borders::ALL);
-            f.render_widget(block, chunks[2]);
+            let mut msg = Text::from(Span::raw("Type to filter, use Alt+Q to exit"));
+            msg.patch_style(Style::default());
+            let header = Paragraph::new(msg);
+            f.render_widget(header, chunks[0]);
+
+            let input = Paragraph::new(app.input.as_ref())
+                .style(Style::default().fg(Color::Yellow))
+                .block(Block::default().borders(Borders::ALL).title("Input"));
+            f.render_widget(input, chunks[1]);
+
+            let filtered_items = app.filtered_items();
+            let list_items: Vec<_> = filtered_items
+                .iter()
+                .map(|s| ListItem::new(Span::raw(s)))
+                .collect();
+            let list_items_wrapper =
+                List::new(list_items).block(Block::default().borders(Borders::ALL).title("Items"));
+            f.render_widget(list_items_wrapper, chunks[2]);
+
+            f.set_cursor(chunks[1].x + app.input.width() as u16 + 1, chunks[1].y + 1);
         })?;
 
+        // ===========
+        //    Input
+        // ===========
+
         if let Event::Input(input) = events.next()? {
-            if let Key::Char('q') = input {
+            if EXIT_KEY == input {
                 break;
+            }
+            match input {
+                EXIT_KEY => break,
+                Key::Esc => app.input.clear(),
+                Key::PageDown => app.page += 1,
+                Key::PageUp => app.page = max(0, app.page - 1),
+                Key::Char(c) => app.input.push(c),
+                Key::Backspace => {
+                    app.input.pop();
+                }
+                _ => {}
             }
         }
     }

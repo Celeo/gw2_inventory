@@ -26,7 +26,7 @@ impl Api {
         })
     }
 
-    fn get_character_names(&self) -> Result<Vec<String>> {
+    pub fn get_token_character_names(&self) -> Result<Vec<String>> {
         debug!("Getting character names");
         let resp = self.client.get(&format!("{}characters", API_ROOT)).send()?;
         debug!("Response code: {}", resp.status());
@@ -45,11 +45,10 @@ impl Api {
         Ok(inventory)
     }
 
-    pub fn get_all_inventories(&self) -> Result<HashMap<String, Inventory>> {
+    pub fn get_inventories(&self, names: &[&str]) -> Result<HashMap<String, Inventory>> {
         let mut inventories = HashMap::new();
-        let names = self.get_character_names()?;
-        for name in &names {
-            inventories.insert(name.to_owned(), self.get_character_inventory(&name)?);
+        for name in names {
+            inventories.insert(name.to_string(), self.get_character_inventory(&name)?);
         }
         Ok(inventories)
     }

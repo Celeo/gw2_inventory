@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct InventorySlot {
     pub id: u64,
     pub count: u8,
@@ -13,16 +13,26 @@ pub struct InventorySlot {
     pub skin: Option<u64>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Bag {
     pub id: u64,
     pub size: u64,
     pub inventory: Vec<Option<InventorySlot>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Inventory {
     pub bags: Vec<Bag>,
+}
+
+impl Inventory {
+    pub fn all_content(&self) -> Vec<InventorySlot> {
+        self.bags
+            .iter()
+            .flat_map(|bag| bag.inventory.clone()) // find a way to do this without 'clone'
+            .filter_map(|slot| slot)
+            .collect()
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -35,4 +45,9 @@ pub struct ItemInfo {
     pub level: u8,
     pub rarity: String,
     pub icon: Option<String>,
+}
+
+// TODO improvements
+pub fn for_display(slot: &InventorySlot, info: &ItemInfo) -> String {
+    format!("{} (x{})", info.name, slot.count)
 }

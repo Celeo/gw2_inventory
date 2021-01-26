@@ -15,7 +15,7 @@ fn cache_file_path() -> PathBuf {
 }
 
 pub struct Cache {
-    pub items: HashMap<u64, ItemInfo>,
+    items: HashMap<u64, ItemInfo>,
 }
 
 impl Cache {
@@ -68,5 +68,11 @@ impl Cache {
         debug!("Cache file does not exist");
         self.do_populate(api)?;
         Ok(())
+    }
+
+    pub fn lookup(&self, item: &u64) -> &ItemInfo {
+        self.items
+            .get(item)
+            .expect("Could not locate item information")
     }
 }
