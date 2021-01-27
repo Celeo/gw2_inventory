@@ -21,7 +21,7 @@ use tui::{
 };
 use unicode_width::UnicodeWidthStr;
 
-const TICK_RATE: Duration = Duration::from_millis(250);
+const TICK_RATE: Duration = Duration::from_millis(100);
 const EXIT_KEY: Key = Key::Alt('q');
 
 struct App {
@@ -67,7 +67,7 @@ impl App {
         let on_page = paginate(&filtered, self.page, self.page_size);
         on_page
             .iter()
-            .map(|item| format!("{} (x{})", item.name, item.count))
+            .map(|item| format!("{} (x{}) - {}", item.name, item.count, item.character))
             .collect()
     }
 }
