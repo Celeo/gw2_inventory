@@ -1,7 +1,7 @@
-use crate::{cache::Cache, filtering::filter, models::Inventory};
+use crate::{filtering::filter, models::FullItem};
 use anyhow::Result;
 use log::error;
-use std::{collections::HashMap, io, sync::mpsc, thread, time::Duration};
+use std::{io, sync::mpsc, thread, time::Duration};
 use termion::{
     event::Key,
     input::{MouseTerminal, TermRead},
@@ -22,18 +22,16 @@ const TICK_RATE: Duration = Duration::from_millis(250);
 const EXIT_KEY: Key = Key::Alt('q');
 
 struct App {
-    inventories: HashMap<String, Inventory>,
-    cache: Cache,
+    items: Vec<FullItem>,
     input: String,
     page: usize,
     page_size: u16,
 }
 
 impl App {
-    fn new(inventories: HashMap<String, Inventory>, cache: Cache) -> Self {
+    fn new(items: Vec<FullItem>) -> Self {
         Self {
-            inventories,
-            cache,
+            items,
             input: String::new(),
             page: 0,
             page_size: 0,
@@ -41,10 +39,7 @@ impl App {
     }
 
     fn get_all_slots_count(&self) -> usize {
-        self.inventories
-            .values()
-            .flat_map(|inv| inv.all_content())
-            .count()
+        self.items.len()
     }
 
     fn search_status(&self) -> String {
@@ -62,12 +57,7 @@ impl App {
     }
 
     fn filtered_items(&self) -> Vec<String> {
-        let slots = self
-            .inventories
-            .values()
-            .flat_map(|inv| inv.all_content())
-            .collect::<Vec<_>>();
-        filter(&slots, &self.cache, self.page, self.page_size)
+        filter(&self.items, self.page, self.page_size)
     }
 }
 
@@ -113,7 +103,7 @@ impl Events {
     }
 }
 
-pub fn run(inventories: HashMap<String, Inventory>, cache: Cache) -> Result<()> {
+pub fn run(items: Vec<FullItem>) -> Result<()> {
     // ===========
     //    Setup
     // ===========
@@ -123,7 +113,7 @@ pub fn run(inventories: HashMap<String, Inventory>, cache: Cache) -> Result<()> 
     let backend = TermionBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
     let events = Events::new();
-    let mut app = App::new(inventories, cache);
+    let mut app = App::new(items);
 
     loop {
         // ============

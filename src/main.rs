@@ -10,6 +10,7 @@ mod cache;
 use cache::Cache;
 mod filtering;
 mod screen;
+mod util;
 
 fn select_characters(characters: &[String]) -> Result<Vec<&str>> {
     let theme = ColorfulTheme::default();
@@ -59,8 +60,11 @@ fn main() -> Result<()> {
     info!("Getting inventories");
     let inventories = api.get_inventories(&selected)?;
 
+    debug!("Processing item lists");
+    let items = util::process_inventories(&inventories, &cache);
+
     debug!("Launching TUI");
-    screen::run(inventories, cache)?;
+    screen::run(items)?;
 
     Ok(())
 }

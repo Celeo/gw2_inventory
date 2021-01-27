@@ -1,22 +1,22 @@
-use crate::{
-    cache::Cache,
-    models::{InventorySlot, ItemInfo},
-};
+use crate::models::FullItem;
 
-// TODO improvements
-fn for_display(slot: &InventorySlot, info: &ItemInfo) -> String {
-    format!("{} (x{})", info.name, slot.count)
+// TODO improve
+// note that I also may want to just switch to a table; have to see
+fn for_display(item: &FullItem) -> String {
+    format!("{} (x{})", item.name, item.count)
 }
 
-// TODO filtering and pagination
-// TODO combine all items of the same type per character into a single "stack"
-pub fn filter(slots: &[InventorySlot], cache: &Cache, page: usize, page_size: u16) -> Vec<String> {
+pub fn filter(items: &[FullItem], page: usize, page_size: u16) -> Vec<String> {
+    // variable setup
     let page_size = page_size as usize;
     let mut ret = Vec::new();
 
-    for slot in slots.iter().skip(page * page_size).take(page_size) {
-        let info = cache.lookup(&slot.id);
-        ret.push(for_display(&slot, info));
+    // TODO filter by user input
+    // ...
+
+    // pagination
+    for item in items.iter().skip(page * page_size).take(page_size) {
+        ret.push(for_display(&item));
     }
     ret
 }

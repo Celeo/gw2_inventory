@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct InventorySlot {
     pub id: u64,
-    pub count: u8,
+    pub count: u64,
     pub binding: Option<String>,
     pub bound_to: Option<String>,
     #[serde(default)]
@@ -11,6 +11,20 @@ pub struct InventorySlot {
     #[serde(default)]
     pub upgrades: Vec<u64>,
     pub skin: Option<u64>,
+}
+
+impl InventorySlot {
+    pub fn same_item(&self, other: &InventorySlot) -> bool {
+        if self == other {
+            return true;
+        }
+        self.id == other.id
+            && self.binding == other.binding
+            && self.bound_to == other.bound_to
+            && self.infusions == other.infusions
+            && self.upgrades == other.upgrades
+            && self.skin == other.skin
+    }
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -45,4 +59,27 @@ pub struct ItemInfo {
     pub level: u8,
     pub rarity: String,
     pub icon: Option<String>,
+}
+
+#[derive(Debug)]
+pub struct FullItem {
+    pub id: u64,
+    pub count: u64,
+    pub name: String,
+    pub description: Option<String>,
+    pub item_type: String,
+    pub character: String,
+}
+
+impl FullItem {
+    pub fn new(slot: &InventorySlot, info: &ItemInfo, character: &str) -> Self {
+        Self {
+            id: info.id,
+            count: slot.count,
+            name: info.name.clone(),
+            description: info.description.clone(),
+            item_type: info.item_type.clone(),
+            character: character.to_string(),
+        }
+    }
 }
