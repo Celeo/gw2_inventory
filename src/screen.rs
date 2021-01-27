@@ -1,4 +1,4 @@
-use crate::{filtering::filter, models::FullItem};
+use crate::{models::FullItem, util::filter::filter};
 use anyhow::Result;
 use log::error;
 use std::{io, sync::mpsc, thread, time::Duration};

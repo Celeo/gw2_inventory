@@ -8,9 +8,9 @@ mod models;
 use api::Api;
 mod cache;
 use cache::Cache;
-mod filtering;
 mod screen;
 mod util;
+use util::model::process_inventories;
 
 fn select_characters(characters: &[String]) -> Result<Vec<&str>> {
     let theme = ColorfulTheme::default();
@@ -61,7 +61,7 @@ fn main() -> Result<()> {
     let inventories = api.get_inventories(&selected)?;
 
     debug!("Processing item lists");
-    let items = util::process_inventories(&inventories, &cache);
+    let items = process_inventories(&inventories, &cache);
 
     debug!("Launching TUI");
     screen::run(items)?;
