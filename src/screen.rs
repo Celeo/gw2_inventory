@@ -1,4 +1,7 @@
-use crate::{models::FullItem, util::filter::filter};
+use crate::{
+    models::FullItem,
+    util::{filter, paginate},
+};
 use anyhow::Result;
 use log::error;
 use std::{io, sync::mpsc, thread, time::Duration};
@@ -57,7 +60,15 @@ impl App {
     }
 
     fn filtered_items(&self) -> Vec<String> {
-        filter(&self.items, self.page, self.page_size)
+        let filtered: Vec<_> = filter(&self.items, &self.input)
+            .iter()
+            .map(|&i| i.clone())
+            .collect();
+        let on_page = paginate(&filtered, self.page, self.page_size);
+        on_page
+            .iter()
+            .map(|item| format!("{} (x{})", item.name, item.count))
+            .collect()
     }
 }
 
@@ -173,7 +184,10 @@ pub fn run(items: Vec<FullItem>) -> Result<()> {
         if let Event::Input(input) = events.next()? {
             match input {
                 EXIT_KEY => break,
-                Key::Esc => app.input.clear(),
+                Key::Esc => {
+                    app.input.clear();
+                    app.page = 0;
+                }
                 Key::PageDown => {
                     if app.page < app.max_pages() - 1 {
                         app.page += 1;
@@ -184,9 +198,13 @@ pub fn run(items: Vec<FullItem>) -> Result<()> {
                         app.page -= 1;
                     }
                 }
-                Key::Char(c) => app.input.push(c),
+                Key::Char(c) => {
+                    app.input.push(c);
+                    app.page = 0;
+                }
                 Key::Backspace => {
                     app.input.pop();
+                    app.page = 0;
                 }
                 _ => {}
             }

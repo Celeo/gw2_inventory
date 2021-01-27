@@ -27,14 +27,14 @@ impl InventorySlot {
     }
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct Bag {
     pub id: u64,
     pub size: u64,
     pub inventory: Vec<Option<InventorySlot>>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct Inventory {
     pub bags: Vec<Bag>,
 }
@@ -61,7 +61,7 @@ pub struct ItemInfo {
     pub icon: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct FullItem {
     pub id: u64,
     pub count: u64,

@@ -20,6 +20,7 @@ categories = [
 anyhow = "1.0.37"
 dialoguer = "0.7.1"
 dotenv = "0.15.0"
+fuzzy-matcher = "0.3.7"
 home = "0.5.3"
 log = "0.4.11"
 pretty_env_logger = "0.4.0"

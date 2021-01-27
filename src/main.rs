@@ -10,7 +10,7 @@ mod cache;
 use cache::Cache;
 mod screen;
 mod util;
-use util::model::process_inventories;
+use util::process_inventories;
 
 fn select_characters(characters: &[String]) -> Result<Vec<&str>> {
     let theme = ColorfulTheme::default();
