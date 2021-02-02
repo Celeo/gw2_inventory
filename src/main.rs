@@ -20,7 +20,7 @@ fn select_characters(characters: &[String]) -> Result<Vec<&str>> {
         .with_prompt("Select values")
         .items(&characters)
         .defaults(
-            &iter::repeat(false) // TODO change to 'true'
+            &iter::repeat(true)
                 .take(characters.len())
                 .collect::<Vec<_>>(),
         )

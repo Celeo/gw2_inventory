@@ -1,18 +1,17 @@
 # gw2_inventory
 
 [![CI](https://github.com/Celeo/gw2_inventory/workflows/CI/badge.svg?branch=master)](https://github.com/celeo/gw2_inventory/actions?query=workflow%3ACI)
-[![Crates.io](https://img.shields.io/crates/v/gw2_inventory.svg)](https://crates.io/crates/gw2_inventory)
-[![License](https://img.shields.io/crates/l/gw2_inventory)](https://github.com/Celeo/gw2_inventory/blob/master/Cargo.toml#L10)
 
-TBD
+A TUI for searching items across your characters in Guild Wars 2.
 
 ## Installing
 
-TBD
+This tool isn't built anywhere, so you'll need Rust to do so. See [building/steps](#steps) below.
 
 ## Using
 
-TBD
+Currently requires a `API_KEY` environment key set to a GW2 API key with account, characters, and inventories scopes.
+Then run the tool. Currently only runs on Linux.
 
 ## Developing
 
